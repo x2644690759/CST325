@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>zihao</title>
+  <link href="style.css" rel="stylesheet" type="text/css" />
+
+  <script>
+    var sceneList = [];
+    xc=10;
+    yc=10;
+    length=80;
+    width=70;
+    currentFrameNumber = 1;
+
+    function init(){
+      updateAndDraw();
+    }
+
+    function Rectangle(x, y){
+
+      a=Math.floor(Math.random()*256);
+      b=Math.floor(Math.random()*256);
+      c=Math.floor(Math.random()*256);
+
+      color = "rgb(" +a+"," +b+","+c+")";
+
+      this.draw = function(){
+        var c = document.getElementById("canvas");
+        var ctx = c.getContext("2d");
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, length, width);
+        ctx.strokeRect(x, y, length, width);
+
+      }
+
+    }
+
+    function updateAndDraw(){
+
+      var newRectangle = new Rectangle(Math.floor(Math.random()*300), Math.floor(Math.random()*200));
+      newRectangle.draw();
+      sceneList.push(newRectangle);
+
+      updateStats();
+      
+      window.requestAnimationFrame(updateAndDraw);{
+        currentFrameNumber++;
+      }
+    }
+
+    function updateStats(){
+      var p = document.getElementById("frame");
+      p.innerText="Frame Count: " + currentFrameNumber;
+
+      var p = document.getElementById("rectangle");
+      p.innerText="Rectangle Count: " + sceneList.length;
+    }
+
+    window.requestAnimationFrame(updateAndDraw);
+  </script>
+</head>
+
+<body onload="init()">
+    <canvas id="canvas" width="300" height="200" style="border:1px solid gray;"></canvas>
+    
+    <br><br>
+    <button type="button">Change spawn color</button>
+    <br><br>
+
+    <p id="frame">Frame Count: 0</p>
+    <p id="rectangle">Rectangle Count: 0</p>
+</body>
+
+</html>
