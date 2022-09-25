@@ -67,10 +67,12 @@ var eyeCoordinate = new Vector3(0, 0, eyeDistance); // all of your rays will use
 
 var sphere = new Sphere(new Vector3(0,0,0), 0.25); // todo = new Sphere(..., ...);
 var plane = new Plane(new Vector3(0,1,0), new Vector3(0, -0.25,0))// todo = new Plane(..., ...);
-var leftWall = new Plane(new Vector3(1,0,0), new Vector3(-1,0,0));
-var rightWall = new Plane(new Vector3(-1,0,0), new Vector3(1,0,0));
-var ceiling =   new Plane(new Vector3(0,-1,0), new Vector3(0,1,0));
+var leftWall = new Plane(new Vector3(1,0,0), new Vector3(-1,0,0), new Vector3(1,0,0));
+var rightWall = new Plane(new Vector3(-1,0,0), new Vector3(1,0,0), new Vector3(0,1,0));
+var ceiling = new Plane(new Vector3(0,-1,0), new Vector3(0,1,0));
 var backWall =  new Plane(new Vector3(0,0,1), new Vector3(0,0,-1));
+
+var scene = [sphere, plane, leftWall, rightWall, ceiling, backWall];
 
 // end of raytracer setup ******************************************************
 
@@ -89,11 +91,11 @@ function generateRayForPixel(xPixelIndex, yPixelIndex) {
 }
 
 // -----------------------------------------------------------------------------
-function setPixelColor(xPixelIndex, yPixelIndex, shadeOfGray /*[0,1]*/) {
-	var index = (yPixelIndex * pixelsAcross + xPixelIndex) * 4; // 4 bytes per pixel
-	imageData.data[index + 0] = shadeOfGray * 255; // red channel
-	imageData.data[index + 1] = shadeOfGray * 255; // green channel
-	imageData.data[index + 2] = shadeOfGray * 255; // blue channel
+function setPixelColor(xPixelIndex, yPixelIndex, color, dotLight /*[0,1]*/) {    
+    var index = (yPixelIndex * pixelsAcross + xPixelIndex) * 4; // 4 bytes per pixel
+	imageData.data[index + 0] = color.x * 255 *dotLight; // red channel
+	imageData.data[index + 1] = color.y * 255 *dotLight; // green channel
+	imageData.data[index + 2] = color.z * 255 *dotLight; // blue channel
 	imageData.data[index + 3] = 255;
 }
 var lightPosition = new Vector3(1,0,0);
@@ -109,50 +111,49 @@ function updateAndRender(timeElapsed) {
   // last time you call it will be the color and overwrite previous calls.
 	for (var yPixelIndex = 0; yPixelIndex < pixelsDown; ++yPixelIndex) {
 		for (var xPixelIndex = 0; xPixelIndex < pixelsAcross; ++xPixelIndex) {
-
-			// Uncomment this once you've coded generateRayForPixel
-			var pixelRay = generateRayForPixel(xPixelIndex, yPixelIndex);
-
-			// See if the ray intersects the sphere or the plane (or every object in our scene)
-			// Uncomment when your sphere or plane code is ready
-			var sphereResult = sphere.raycast(pixelRay);
-			var planeResult = plane.raycast(pixelRay);
-			var leftWallResult = leftWall.raycast(pixelRay);
-            var rightWallResult = rightWall.raycast(pixelRay);
-
-			// determine which hit object is the closest (in case there is more than 1 hit)
 			
+            var pixelRay = generateRayForPixel(xPixelIndex, yPixelIndex);
 
-			if(sphereResult.hit == true && planeResult.hit == true){
-				if(sphereResult.distance < planeResult.distance){
-					var lightVector = new Vector3().fromTo(sphereResult.point, lightPosition);
-			        var normalDotLight = sphereResult.normal.dot(lightVector.normalize());
+            var hitList = new Map();
+			var hitListKeys = [];
+            var targetObject;
+            var minDistance = Number.MAX_VALUE;
+			
+            for(var k = 0; k < scene.length; k++){
+				var obj = scene[k];
 				
-				    setPixelColor(xPixelIndex, yPixelIndex, normalDotLight);
-				}
-			}else if(sphereResult.hit == true){
-				var lightVector = new Vector3().fromTo(sphereResult.point, lightPosition);
-			    var normalDotLight = sphereResult.normal.dot(lightVector.normalize());
-				
-				setPixelColor(xPixelIndex, yPixelIndex, normalDotLight);
-			}else if(planeResult.hit == true){
-                var shadowDirection = new Vector3().fromTo(planeResult.point, lightPosition);
-				var shadowRay = new Ray(planeResult.point,shadowDirection);
-				var shadowResult = sphere.raycast(shadowRay);
+				var result = obj.raycast(pixelRay);
+                
+				if(result.hit){					
+					hitList.set(result.distance, result);
+					hitListKeys.push(result.distance);
 
-				if(shadowResult.hit == true && shadowResult.distance < shadowDirection.length()){
-			        setPixelColor(xPixelIndex, yPixelIndex, 0.0);
-				}else{
-					var lightVector = new Vector3().fromTo(planeResult.point, lightPosition);
-                    var normalDotLight = planeResult.normal.dot(lightVector.normalize());
+                    if(result.distance < minDistance){
+                        minDistance = result.distance;
 
-			        setPixelColor(xPixelIndex, yPixelIndex, normalDotLight);
+                        targetObject = k;
+                    }
 				}
-			}else{
-				setPixelColor(xPixelIndex, yPixelIndex, 0.1);
 			}
 
-			
+            hitListKeys.sort(function(a, b){return a - b});
+
+			var closestObj = hitList.get(hitListKeys[0]);
+            var lightVector = new Vector3().fromTo(closestObj.point, lightPosition);
+            var normalDotLight = closestObj.normal.dot(lightVector.normalize())
+
+            var shadowDirection = new Vector3().fromTo(closestObj.point, lightPosition);
+            var shadowRay = new Ray(closestObj.point,shadowDirection);
+            var shadowResult = sphere.raycast(shadowRay);
+
+            var temp = scene[targetObject].color.clone();
+  
+            if(shadowResult.hit == true && shadowResult.distance < shadowDirection.length()){
+                setPixelColor(xPixelIndex, yPixelIndex, 0.0);
+            }else{
+                setPixelColor(xPixelIndex, yPixelIndex, temp,normalDotLight);
+            }
+        
 		}
 	}
 

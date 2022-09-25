@@ -9,16 +9,22 @@ var Sphere = function(center, radius, color) {
   if (!(this instanceof Sphere)) {
     console.error("Sphere constructor must be called with the new operator");
   }
-
-	if (center == undefined || radius == undefined || color == undefined) {
-		this.center = new Vector3();
-		this.radius = 1;
-		this.color = new Vector3(1,1,1);
-  }
-
+    
     this.center = center;
 	this.radius = radius;
 	this.color = color;
+
+  if(center === undefined){
+	this.center = new Vector3;
+  }
+
+  if(radius === undefined){
+	this.radius = 1;
+  }
+
+  if(color === undefined){
+	this.color = new Vector3(1,1,1);
+  }
 
   if (!(this.center instanceof Vector3)) {
     console.error("The sphere center must be a Vector3");
