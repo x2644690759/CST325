@@ -293,8 +293,9 @@
 		function renderTriangle(secondsElapsedSinceStart) {
 			// calculate the number of degrees we should have rotated given how much time has elapsed
 			// 60 degrees per second
+			console.log(secondsElapsedSinceStart);
 			var degrees = secondsElapsedSinceStart * 60/1000;
-			//console.log("degrees: "+degrees);
+			console.log("degrees: "+degrees);
 			
 			// todo #11 - make the triangle rotate			
 			var rotation = triangleGeometry.worldMatrix.makeRotationY(degrees);
