@@ -11,10 +11,14 @@ function WebGLGeometryQuad(gl) {
             -1.0,   -1.0,   0.0,
             1.0,    -1.0,   0.0,
             -1.0,   1.0,    0.0,
+            -1.0,   1.0,    0.0,
+            1.0,    -1.0,   0.0,
             1.0,    1.0,    0.0
         ];
 
         var normals = [
+            0.0,    0.0,    1.0,
+            0.0,    0.0,    1.0,
             0.0,    0.0,    1.0,
             0.0,    0.0,    1.0,
             0.0,    0.0,    1.0,
@@ -25,11 +29,10 @@ function WebGLGeometryQuad(gl) {
             0.0, 0.0,
             1.0, 0.0,
             0.0, 1.0,
+            0.0, 1.0,
+            1.0, 0.0,
             1.0, 1.0
         ];
-
-        var indices = [0, 1, 2, 2, 1, 3];
-        this.indexCount = indices.length;
 
         // create the position and color information for this object and send it to the GPU
         this.vertexBuffer = gl.createBuffer();
@@ -43,10 +46,6 @@ function WebGLGeometryQuad(gl) {
         this.texCoordsBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordsBuffer);
         this.gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
-
-        this.indexBuffer = this.gl.createBuffer();
-        this.gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        this.gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
         if (rawImage) {
             this.texture = this.gl.createTexture();
@@ -66,14 +65,14 @@ function WebGLGeometryQuad(gl) {
 	}
 
 	// -------------------------------------------------------------------------
-	this.render = function(camera, projectionMatrix, shaderProgram) {
-        this.gl.useProgram(shaderProgram);
+	this.render = function(camera, projectionMatrix, shaderProgram, shadowTexture) {
+        gl.useProgram(shaderProgram);
 
         var attributes = shaderProgram.attributes;
         var uniforms = shaderProgram.uniforms;
 
-        this.gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-        this.gl.vertexAttribPointer(
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.vertexAttribPointer(
             attributes.vertexPositionAttribute,
             3,
             gl.FLOAT,
@@ -81,11 +80,11 @@ function WebGLGeometryQuad(gl) {
             0,
             0
         );
-        this.gl.enableVertexAttribArray(attributes.vertexPositionAttribute);
+        gl.enableVertexAttribArray(attributes.vertexPositionAttribute);
 
         if (attributes.hasOwnProperty('vertexNormalsAttribute')) {
-            this.gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
-            this.gl.vertexAttribPointer(
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
+            gl.vertexAttribPointer(
                 attributes.vertexNormalsAttribute,
                 3,
                 gl.FLOAT,
@@ -93,41 +92,50 @@ function WebGLGeometryQuad(gl) {
                 0,
                 0
             );
-            this.gl.enableVertexAttribArray(attributes.vertexNormalsAttribute);
+            gl.enableVertexAttribArray(attributes.vertexNormalsAttribute);
         }
 
-        if (attributes.hasOwnProperty('vertexTexcoordsAttribute')) {
-            this.gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordsBuffer);
-            this.gl.vertexAttribPointer(
-                attributes.vertexTexcoordsAttribute,
+        if (attributes.hasOwnProperty('vertexTexCoordsAttribute')) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordsBuffer);
+            gl.vertexAttribPointer(
+                attributes.vertexTexCoordsAttribute,
                 2,
                 gl.FLOAT,
                 gl.FALSE,
                 0,
                 0
             );
-            this.gl.enableVertexAttribArray(attributes.vertexTexcoordsAttribute);
+            gl.enableVertexAttribArray(attributes.vertexTexCoordsAttribute);
         }
 
         if (this.texture) {
-            this.gl.activeTexture(gl.TEXTURE0);
-            this.gl.bindTexture(gl.TEXTURE_2D, this.texture);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        }
+
+        if (shadowTexture) {
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, shadowTexture);
         }
 
         // Send our matrices to the shader
-        this.gl.uniformMatrix4fv(uniforms.worldMatrixUniform, false, this.worldMatrix.clone().transpose().elements);
-        this.gl.uniformMatrix4fv(uniforms.viewMatrixUniform, false, camera.getViewMatrix().clone().transpose().elements);
-        this.gl.uniformMatrix4fv(uniforms.projectionMatrixUniform, false, projectionMatrix.clone().transpose().elements);
+        gl.uniformMatrix4fv(uniforms.worldMatrixUniform, false, this.worldMatrix.clone().transpose().elements);
+        gl.uniformMatrix4fv(uniforms.viewMatrixUniform, false, camera.getViewMatrix().clone().transpose().elements);
+        gl.uniformMatrix4fv(uniforms.projectionMatrixUniform, false, projectionMatrix.clone().transpose().elements);
 
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        this.gl.drawElements(this.gl.TRIANGLES, this.indexCount, gl.UNSIGNED_SHORT, 0)
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-        this.gl.bindTexture(gl.TEXTURE_2D, null);
-        this.gl.disableVertexAttribArray(attributes.vertexPositionAttribute);
-        this.gl.disableVertexAttribArray(attributes.vertexNormalsAttribute);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, null);
 
-        if (attributes.hasOwnProperty('vertexTexcoordsAttribute')) {
-            this.gl.disableVertexAttribArray(attributes.vertexTexcoordsAttribute);
+        gl.disableVertexAttribArray(attributes.vertexPositionAttribute);
+        gl.disableVertexAttribArray(attributes.vertexNormalsAttribute);
+        gl.disableVertexAttribArray(attributes.vertexTexCoordsAttribute);
+
+        if (attributes.hasOwnProperty('vertexTexCoordsAttribute')) {
+            gl.disableVertexAttribArray(attributes.vertexTexCoordsAttribute);
         }
 	}
 }
